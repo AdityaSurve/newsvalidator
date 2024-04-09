@@ -2,24 +2,15 @@ from flask import Flask, request, jsonify
 from DataIngestion import NewsApi
 from flask_cors import CORS
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.cluster import KMeans
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk.tokenize import word_tokenize
-from nltk.tokenize import sent_tokenize
-from nltk.probability import FreqDist
-from nltk.corpus import wordnet
-from string import punctuation
-import numpy as np
-import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import AgglomerativeClustering
 import re
 from sklearn.metrics.pairwise import linear_kernel
-from datetime import datetime
 from transformers import AutoTokenizer, AutoModel
-import torch
 from scipy.spatial.distance import cosine
 
 BOOST_VALUE = 0.2
@@ -29,8 +20,8 @@ model = AutoModel.from_pretrained('bert-base-uncased')
 def calculate_similarity(vector1, vector2):
     return linear_kernel(vector1, vector2).flatten()[0]
 
+
 nltk.download('punkt')
-nltk.download('wordnet')
 nltk.download('stopwords')
 nltk.download('averaged_perceptron_tagger')
 nltk.download('maxent_ne_chunker')
@@ -127,20 +118,10 @@ def summarize_cluster(articles):
     }
 
 
-# def get_embedding(text):
-#     inputs = tokenizer(text, return_tensors='pt')
-#     outputs = model(**inputs)
-#     return outputs.last_hidden_state.squeeze().detach().numpy()
-
 def get_embedding(text):
     inputs = tokenizer(text, return_tensors='pt')
     outputs = model(**inputs)
     return outputs.last_hidden_state.mean(dim=1).squeeze().detach().numpy()
-
-# def get_embedding(text):
-#     inputs = tokenizer(text, return_tensors='pt')
-#     outputs = model(**inputs)
-#     return outputs.last_hidden_state.mean(dim=1).detach().numpy()
 
 app = Flask(__name__)
 CORS(app)
