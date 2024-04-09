@@ -18,9 +18,13 @@ from sklearn.cluster import AgglomerativeClustering
 import re
 from sklearn.metrics.pairwise import linear_kernel
 from datetime import datetime
+from transformers import AutoTokenizer, AutoModel
+import torch
+from scipy.spatial.distance import cosine
 
-BOOST_VALUE = 0.5
-
+BOOST_VALUE = 0.2
+tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
+model = AutoModel.from_pretrained('bert-base-uncased')
 
 def calculate_similarity(vector1, vector2):
     return linear_kernel(vector1, vector2).flatten()[0]
@@ -122,6 +126,22 @@ def summarize_cluster(articles):
         'description': description,
     }
 
+
+# def get_embedding(text):
+#     inputs = tokenizer(text, return_tensors='pt')
+#     outputs = model(**inputs)
+#     return outputs.last_hidden_state.squeeze().detach().numpy()
+
+def get_embedding(text):
+    inputs = tokenizer(text, return_tensors='pt')
+    outputs = model(**inputs)
+    return outputs.last_hidden_state.mean(dim=1).squeeze().detach().numpy()
+
+# def get_embedding(text):
+#     inputs = tokenizer(text, return_tensors='pt')
+#     outputs = model(**inputs)
+#     return outputs.last_hidden_state.mean(dim=1).detach().numpy()
+
 app = Flask(__name__)
 CORS(app)
 newsapi = NewsApi()
@@ -145,35 +165,29 @@ def get_newsapi():
     if len(news['articles']) < 5:
         return jsonify(news)
 
-    preprocessed_query = preprocess_articles([query])[0]
-    valid_article_indices = []
-    vectorizer = TfidfVectorizer()
+    query_embedding = get_embedding(query)
+
     for i, article in enumerate(news['articles']):
         description = article['description']
         title = article['title']
         if description is not None and description.strip() != '':
-            preprocessed_description = preprocess_articles([description])[0]
-            corpus = [preprocessed_query, preprocessed_description]
-            X = vectorizer.fit_transform(corpus)
-            similarity_desc = calculate_similarity(X[0], X[1])
-            valid_article_indices.append(i)
+            description_embedding = get_embedding(description)
+            similarity_desc = 1 - \
+                cosine(query_embedding, description_embedding)
         if title is not None and title.strip() != '':
-            preprocessed_title = preprocess_articles([title])[0]
-            corpus = [preprocessed_query, preprocessed_title]
-            X = vectorizer.fit_transform(corpus)
-            similarity_title = calculate_similarity(X[0], X[1])
-            valid_article_indices.append(i)
-        avg_similarity = (similarity_desc + similarity_title) / 2
-        news['articles'][valid_article_indices[i]
-                         ]['relevanceScore'] = avg_similarity
-    filtered_articles = []
-    for i in news['articles']:
-        if 'relevanceScore' in i and i['relevanceScore'] > 0.1:
-            filtered_articles.append(i)
+            title_embedding = get_embedding(title)
+            similarity_title = 1 - cosine(query_embedding, title_embedding)
+        avg_similarity = min(
+            ((similarity_desc + similarity_title) / 2) + BOOST_VALUE, 1)
+        news['articles'][i]['relevanceScore'] = avg_similarity
+
+    filtered_articles = [i for i in news['articles']
+                         if 'relevanceScore' in i and i['relevanceScore'] > 0.5]
+    filtered_articles = sorted(
+        filtered_articles, key=lambda x: x['relevanceScore'], reverse=True)
     news['articles'] = filtered_articles
     analysis = []
     grouped_articles = group_similar_articles(news['articles'])
-    articles = news['articles']
     for articles in grouped_articles.values():
         analysis.append(summarize_cluster(articles))
     news['analysis'] = analysis if len(analysis) > 0 else []
