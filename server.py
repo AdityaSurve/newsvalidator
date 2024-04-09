@@ -10,12 +10,27 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import AgglomerativeClustering
 import re
 from sklearn.metrics.pairwise import linear_kernel
-from transformers import AutoTokenizer, AutoModel
+from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification
 from scipy.spatial.distance import cosine
+import torch
 
 BOOST_VALUE = 0.2
 tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
 model = AutoModel.from_pretrained('bert-base-uncased')
+model_truthValue = AutoModelForSequenceClassification.from_pretrained(
+    "textattack/bert-base-uncased-SST-2")
+tokenizer_truthValue = AutoTokenizer.from_pretrained(
+    "textattack/bert-base-uncased-SST-2")
+
+
+def get_truth_value(article):
+    text = article['title'] + ' ' + article['description']
+    inputs = tokenizer_truthValue(text, truncation=True,
+                                  padding=True, return_tensors='pt')
+    outputs = model_truthValue(**inputs)
+    probabilities = torch.nn.functional.softmax(outputs.logits, dim=-1)
+    truth_value = probabilities[0][1].item()
+    return truth_value
 
 def calculate_similarity(vector1, vector2):
     return linear_kernel(vector1, vector2).flatten()[0]
@@ -67,7 +82,6 @@ def group_similar_articles(articles):
         grouped_articles[label].append(articles[i])
 
     return grouped_articles
-
 
 def summarize_cluster(articles):
     if len(articles) == 0:
@@ -137,17 +151,13 @@ def get_newsapi():
     date = request.args.get('date')
     start_date = request.args.get('start_date')
     end_date = request.args.get('end_date')
-
     news = newsapi.get_news(category, source, query,
                             language, country, date, start_date, end_date)
-
     if len(news['articles']) == 0:
         return jsonify({'error': 'No articles found'})
     if len(news['articles']) < 5:
         return jsonify(news)
-
     query_embedding = get_embedding(query)
-
     for i, article in enumerate(news['articles']):
         description = article['description']
         title = article['title']
@@ -161,7 +171,7 @@ def get_newsapi():
         avg_similarity = min(
             ((similarity_desc + similarity_title) / 2) + BOOST_VALUE, 1)
         news['articles'][i]['relevanceScore'] = avg_similarity
-
+        news['articles'][i]['truthValue'] = get_truth_value(article)
     filtered_articles = [i for i in news['articles']
                          if 'relevanceScore' in i and i['relevanceScore'] > 0.5]
     filtered_articles = sorted(
