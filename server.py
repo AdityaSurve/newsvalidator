@@ -13,6 +13,9 @@ from sklearn.metrics.pairwise import linear_kernel
 from transformers import AutoTokenizer, AutoModel, AutoModelForSequenceClassification
 from scipy.spatial.distance import cosine
 import torch
+import spacy
+from DataModelling import DataModel
+import pandas as pd
 
 BOOST_VALUE = 0.2
 tokenizer = AutoTokenizer.from_pretrained('bert-base-uncased')
@@ -21,7 +24,18 @@ model_truthValue = AutoModelForSequenceClassification.from_pretrained(
     "textattack/bert-base-uncased-SST-2")
 tokenizer_truthValue = AutoTokenizer.from_pretrained(
     "textattack/bert-base-uncased-SST-2")
+nlp = spacy.load("en_core_web_sm")
+data_model = DataModel()
 
+
+def get_main_verb(sentence):
+    doc = nlp(sentence)
+    main_verb = None
+    for token in doc:
+        if token.pos_ == "VERB" and token.dep_ != "aux":
+            main_verb = token.text
+            break
+    return main_verb
 
 def get_truth_value(article):
     text = article['title'] + ' ' + article['description']
@@ -182,7 +196,50 @@ def get_newsapi():
     for articles in grouped_articles.values():
         analysis.append(summarize_cluster(articles))
     news['analysis'] = analysis if len(analysis) > 0 else []
+
+    for article in news['articles']:
+        if article['relevanceScore'] > 0.9 and article['truthValue'] > 0.9:
+            title = article["title"]
+            main_verb = get_main_verb(title)
+            custom_pattern = re.compile(
+                fr'(?P<entity1>.+?)\s+(?P<relation>\b(?:{main_verb})\b)\s+(?P<entity2>.+)')
+            match = custom_pattern.match(title)
+            if match is not None:
+                entity1 = match.group("entity1").strip()
+                entity2 = match.group("entity2").strip()
+                relation = match.group("relation").strip()
+                data_model.add_entity(entity1)
+                data_model.add_entity(entity2)
+                data_model.add_relation(relation, [
+                    entity1,
+                    entity2
+                ])
+                data_model.save_to_csv()
     return jsonify(news)
+
+
+def get_most_similar_entity(entity, entities):
+    entity_doc = nlp(entity)
+    similarity_scores = []
+    for ent in entities:
+        ent_doc = nlp(ent)
+        similarity_scores.append(entity_doc.similarity(ent_doc))
+    most_similar_index = similarity_scores.index(max(similarity_scores))
+    most_similar_entity = entities[most_similar_index]
+    return most_similar_entity
+
+
+@app.route('/graph', methods=['GET'])
+def get_entities_and_relations():
+    entity = request.args.get('entity')
+    most_similar_entity = get_most_similar_entity(
+        entity, data_model.get_all_entities())
+    r = data_model.get_all_relations_by_entity(most_similar_entity)
+    if len(r) > 0:
+        r_df = pd.DataFrame(r)
+        return jsonify(r_df.to_dict(orient='records'))
+    else:
+        return []
 
 if __name__ == '__main__':
     app.run(debug=True)
