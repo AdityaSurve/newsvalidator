@@ -1,11 +1,14 @@
+import networkx as nx
+import matplotlib.pyplot as plt
 import os
 import re
 import pandas as pd
 import numpy as np
 import spacy
+import matplotlib
+matplotlib.use('Agg')
 
 nlp = spacy.load("en_core_web_sm")
-
 
 class DataModel:
     def __init__(self):
@@ -59,3 +62,31 @@ class DataModel:
     def save_to_csv(self):
         self.entities.to_csv("Entities.csv", index=False)
         self.relations.to_csv("Relations.csv", index=False)
+
+    def print(self):
+        relation_df = self.relations.to_dict(orient='records')
+        G = nx.DiGraph()
+        for item in relation_df:
+            G.add_node(item["Entity1"])
+            G.add_node(item["Entity2"])
+            G.add_edge(item["Entity1"], item["Entity2"],
+                       relation=item["Relation"])
+        pos = nx.shell_layout(G)
+        nx.draw(G, pos, node_color='skyblue',
+                node_size=6000, edge_cmap=plt.cm.Blues)
+        for node, (x, y) in pos.items():
+            words = node.split(' ')
+            lines = [' '.join(words[i:i+2]) for i in range(0, len(words), 2)]
+            plt.annotate(
+                '\n'.join(lines),
+                xy=(x, y), textcoords='offset points',
+                horizontalalignment='center', verticalalignment='center',
+                fontsize=6, weight='bold'
+            )
+        edge_labels = nx.get_edge_attributes(G, 'relation')
+        nx.draw_networkx_edge_labels(
+            G, pos, edge_labels=edge_labels, font_size=6)
+        plt.figure(figsize=(10, 10))
+        nx.draw(G, pos, node_color='skyblue',
+                node_size=1200, with_labels=True)
+        plt.savefig('graph.png')

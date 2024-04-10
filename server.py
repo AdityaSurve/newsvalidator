@@ -27,7 +27,6 @@ tokenizer_truthValue = AutoTokenizer.from_pretrained(
 nlp = spacy.load("en_core_web_sm")
 data_model = DataModel()
 
-
 def get_main_verb(sentence):
     doc = nlp(sentence)
     main_verb = None
@@ -217,6 +216,7 @@ def get_newsapi():
                     entity2
                 ])
                 data_model.save_to_csv()
+    data_model.print()
     return jsonify(news)
 
 
@@ -229,7 +229,6 @@ def get_most_similar_entity(entity, entities):
     most_similar_index = similarity_scores.index(max(similarity_scores))
     most_similar_entity = entities[most_similar_index]
     return most_similar_entity
-
 
 @app.route('/graph', methods=['GET'])
 def get_entities_and_relations():
