@@ -38,7 +38,9 @@ def get_main_verb(sentence):
     return main_verb
 
 def get_truth_value(article):
-    text = article['title'] + ' ' + article['description']
+    title = article['title'] if article['title'] is not None else ''
+    description = article['description'] if article['description'] is not None else ''
+    text = title + ' ' + description
     inputs = tokenizer_truthValue(text, truncation=True,
                                   padding=True, return_tensors='pt')
     outputs = model_truthValue(**inputs)
@@ -198,7 +200,7 @@ def get_newsapi():
     news['analysis'] = analysis if len(analysis) > 0 else []
 
     for article in news['articles']:
-        if article['relevanceScore'] > 0.9 and article['truthValue'] > 0.9:
+        if article['relevanceScore'] > 0.8 and article['truthValue'] > 0.9:
             title = article["title"]
             main_verb = get_main_verb(title)
             custom_pattern = re.compile(
