@@ -1,3 +1,4 @@
+from sklearn.metrics.pairwise import cosine_similarity
 import networkx as nx
 import matplotlib.pyplot as plt
 import os
@@ -7,8 +8,6 @@ import numpy as np
 import spacy
 import matplotlib
 matplotlib.use('Agg')
-
-nlp = spacy.load("en_core_web_sm")
 
 class DataModel:
     def __init__(self):
@@ -90,3 +89,30 @@ class DataModel:
         nx.draw(G, pos, node_color='skyblue',
                 node_size=1200, with_labels=True)
         plt.savefig('graph.png')
+
+    def preprocess_relations(self):
+        nlp = spacy.load('en_core_web_md')
+        data = pd.read_csv("Relations.csv")
+        unique_entities1 = pd.unique(data['Entity1'])
+        unique_entities2 = pd.unique(data['Entity2'])
+        for i in range(len(unique_entities1)):
+            for j in range(i+1, len(unique_entities1)):
+                entity1 = nlp(unique_entities1[i])
+                entity2 = nlp(unique_entities1[j])
+                similarity = entity1.similarity(entity2)
+                if similarity > 0.6:
+                    data['Entity1'].replace(
+                        unique_entities1[j], unique_entities1[i], inplace=True)
+
+        for i in range(len(unique_entities2)):
+            for j in range(i+1, len(unique_entities2)):
+                entity1 = nlp(unique_entities2[i])
+                entity2 = nlp(unique_entities2[j])
+                similarity = entity1.similarity(entity2)
+                if similarity > 0.8:
+                    data['Entity2'].replace(
+                        unique_entities2[j], unique_entities2[i], inplace=True)
+
+        data.drop_duplicates(inplace=True)
+        data.reset_index(drop=True, inplace=True)
+        data.to_csv("Relations.csv", index=False)

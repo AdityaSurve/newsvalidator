@@ -216,6 +216,7 @@ def get_newsapi():
                     entity2
                 ])
                 data_model.save_to_csv()
+                data_model.preprocess_relations()
     data_model.print()
     return jsonify(news)
 
@@ -232,6 +233,7 @@ def get_most_similar_entity(entity, entities):
 
 @app.route('/graph', methods=['GET'])
 def get_entities_and_relations():
+    data_model.preprocess_relations()
     entity = request.args.get('entity')
     most_similar_entity = get_most_similar_entity(
         entity, data_model.get_all_entities())
