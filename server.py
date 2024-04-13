@@ -215,8 +215,8 @@ def get_newsapi():
                     entity1,
                     entity2
                 ])
-                data_model.save_to_csv()
-                data_model.preprocess_relations()
+    data_model.save_to_csv()
+    data_model.preprocess()
     data_model.print()
     return jsonify(news)
 
