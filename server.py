@@ -3,6 +3,7 @@ from flask_cors import CORS
 import pandas as pd
 from SportsScrapper import BCCI_Scrapper
 from SportsScrapper import Indian_Athletes_Scrapper
+from SportsScrapper import ICC_Scrapper
 
 app = Flask(__name__)
 CORS(app)
@@ -29,6 +30,15 @@ def get_indianathletics():
 
     return jsonify(articles)
 
+
+@app.route('/icc', methods=['GET'])
+def get_icc():
+    player_name = request.args.get('player_name')
+
+    scrapper = ICC_Scrapper()
+    articles = scrapper.get_player_data(player_name)
+
+    return jsonify(articles)
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -231,6 +231,95 @@ class Indian_Athletes_Scrapper:
             return {"Error": "No data found"}
 
 
+class ICC_Scrapper:
+    def __init__(self):
+        self.url = "https://www.icc-cricket.com/search?"
+        self.player_name = None
+
+    def get_player_data(self, player_name):
+        processed_player_name = player_name.replace(" ", "%20")
+
+        if not processed_player_name:
+            return {"Error": "Invalid input"}
+
+        self.player_name = processed_player_name
+
+        url = self.url + "q=" + self.player_name
+
+        response = self.get_data(processed_player_name, url)
+
+        if response:
+            return {"Response": response}
+        else:
+            return {"Error": "No data found"}
+
+    def get_data(self, player_name, url):
+        try:
+            response = requests.get(url)
+            response.raise_for_status()
+        except requests.RequestException as e:
+            return {"Error": str(e)}
+
+        soup = BeautifulSoup(response.text, 'html.parser')
+        data = []
+
+        player_data = soup.find(
+            'div', class_='my-4 grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-x-6 lg:gap-y-10')
+        if player_data:
+            cards = player_data.find_all(
+                'div', class_='h-[541px] relative rounded-lg lg:rounded-[14px] overflow-hidden')
+            for card in cards:
+                title = ""
+                date = ""
+                content = ""
+                image_url = ""
+                link = ""
+                link_holder = card.find('a')
+                link = link_holder['href']
+                image_holder = link_holder.find_all(
+                    'div')[0]
+                image_holder = image_holder.find('picture')
+                image_holder = image_holder.find('img')
+                image_url = image_holder['src']
+                divs = link_holder.find_all('div')
+                if len(divs) > 1:
+                    content_holder = divs[1]
+                    content_holder = content_holder.find('div')
+                    title_holder = content_holder.find_all('div')[1] if len(
+                        content_holder.find_all('div')) > 1 else None
+                    if title_holder:
+                        title = title_holder.text
+                    date_holder = content_holder.find('time')
+                    date = date_holder.text if date_holder else ""
+                else:
+                    continue
+
+                temp_player_name = player_name.replace("%20", " ")
+                data.append({
+                    "title": title,
+                    "date": date,
+                    "content": content,
+                    "player_name": temp_player_name,
+                    "image_url": image_url,
+                    "link": link,
+                    "sport": "Cricket"
+                })
+
+            if data:
+                df = pd.DataFrame(data)
+                header = ['title', 'date', 'content',
+                          'player_name', 'image_url', 'link', 'sport']
+                if os.path.isfile('ICC.csv') and os.path.getsize('ICC.csv') > 0:
+                    df.to_csv('ICC.csv', mode='a', header=False, index=False)
+                else:
+                    df.to_csv('ICC.csv', mode='a', header=header, index=False)
+                return data
+            else:
+                return {"Error": "No data found"}
+        else:
+            return {"Error": "No data found"}
+
+
 if __name__ == "__main__":
     # scrapper = BCCI_Scrapper()
     # platform = "International"
@@ -301,21 +390,43 @@ if __name__ == "__main__":
     # player_name = "Veda Krishnamurthy"
     # scrapper.get_player_data(player_name, platform, type)
 
-    scrapper = Indian_Athletes_Scrapper()
-    player_name = "Neeraj Chopra"
+    # scrapper = Indian_Athletes_Scrapper()
+    # player_name = "Neeraj Chopra"
+    # scrapper.get_player_data(player_name)
+
+    # player_name = "Hima Das"
+    # scrapper.get_player_data(player_name)
+
+    # player_name = "Dutee Chand"
+    # scrapper.get_player_data(player_name)
+
+    # player_name = "Anju Bobby George"
+    # scrapper.get_player_data(player_name)
+
+    # player_name = "Usha"
+    # scrapper.get_player_data(player_name)
+
+    # player_name = "Milkha Singh"
+    # scrapper.get_player_data(player_name)
+
+    scrapper = ICC_Scrapper()
+    # player_name = "Virat Kohli"
+    # scrapper.get_player_data(player_name)
+
+    player_name = "MS Dhoni"
     scrapper.get_player_data(player_name)
 
-    player_name = "Hima Das"
+    player_name = "Sachin Tendulkar"
     scrapper.get_player_data(player_name)
 
-    player_name = "Dutee Chand"
+    # player_name = "Sourav Ganguly"
+    # scrapper.get_player_data(player_name)
+
+    player_name = "Mithali Raj"
     scrapper.get_player_data(player_name)
 
-    player_name = "Anju Bobby George"
+    player_name = "Harmanpreet Kaur"
     scrapper.get_player_data(player_name)
 
-    player_name = "Usha"
-    scrapper.get_player_data(player_name)
-
-    player_name = "Milkha Singh"
+    player_name = "Smriti Mandhana"
     scrapper.get_player_data(player_name)
