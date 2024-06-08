@@ -289,6 +289,10 @@ class ICC_Scrapper:
                         content_holder.find_all('div')) > 1 else None
                     if title_holder:
                         title = title_holder.text
+                    content_holder = content_holder.find(
+                        'div', class_='text-sm font-bold text-white leading-[1.2] lg:text-lg lg:leading-[1.4] lg:-tracking-[0.72px]')
+                    if content_holder:
+                        content = content_holder.text
                     date_holder = content_holder.find('time')
                     date = date_holder.text if date_holder else ""
                 else:
@@ -319,114 +323,3 @@ class ICC_Scrapper:
         else:
             return {"Error": "No data found"}
 
-
-if __name__ == "__main__":
-    # scrapper = BCCI_Scrapper()
-    # platform = "International"
-    # type = "Men"
-
-    # player_name = "Virat Kohli"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Sachin Tendulkar"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Rohit Sharma"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "MS Dhoni"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Sourav Ganguly"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Ravindra Jadeja"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Jasprit Bumrah"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Yuvraj Singh"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Harbhajan Singh"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Irfan Pathan"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Zaheer Khan"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Bumrah"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Jadeja"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # type = "Women"
-
-    # player_name = "Mithali Raj"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Harmanpreet Kaur"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Smriti Mandhana"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Jhulan Goswami"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Poonam Yadav"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Shafali Verma"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Deepti Sharma"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # player_name = "Veda Krishnamurthy"
-    # scrapper.get_player_data(player_name, platform, type)
-
-    # scrapper = Indian_Athletes_Scrapper()
-    # player_name = "Neeraj Chopra"
-    # scrapper.get_player_data(player_name)
-
-    # player_name = "Hima Das"
-    # scrapper.get_player_data(player_name)
-
-    # player_name = "Dutee Chand"
-    # scrapper.get_player_data(player_name)
-
-    # player_name = "Anju Bobby George"
-    # scrapper.get_player_data(player_name)
-
-    # player_name = "Usha"
-    # scrapper.get_player_data(player_name)
-
-    # player_name = "Milkha Singh"
-    # scrapper.get_player_data(player_name)
-
-    scrapper = ICC_Scrapper()
-    # player_name = "Virat Kohli"
-    # scrapper.get_player_data(player_name)
-
-    player_name = "MS Dhoni"
-    scrapper.get_player_data(player_name)
-
-    player_name = "Sachin Tendulkar"
-    scrapper.get_player_data(player_name)
-
-    # player_name = "Sourav Ganguly"
-    # scrapper.get_player_data(player_name)
-
-    player_name = "Mithali Raj"
-    scrapper.get_player_data(player_name)
-
-    player_name = "Harmanpreet Kaur"
-    scrapper.get_player_data(player_name)
-
-    player_name = "Smriti Mandhana"
-    scrapper.get_player_data(player_name)
