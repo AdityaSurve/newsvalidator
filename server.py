@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pandas as pd
 from SportsScrapper import BCCI_Scrapper, Indian_Athletes_Scrapper, ICC_Scrapper
-from AgricultureScrapper import ICAR_Scrapper
+from AgricultureScrapper import ICAR_Scrapper, FAO_Scrapper
 
 app = Flask(__name__)
 CORS(app)
@@ -45,6 +45,16 @@ def get_icar():
     query = request.args.get('query')
 
     scrapper = ICAR_Scrapper()
+    articles = scrapper.get_query_data(query)
+
+    return jsonify(articles)
+
+
+@app.route('/fao', methods=['GET'])
+def get_icar():
+    query = request.args.get('query')
+
+    scrapper = FAO_Scrapper()
     articles = scrapper.get_query_data(query)
 
     return jsonify(articles)

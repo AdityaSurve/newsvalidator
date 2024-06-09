@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import pandas as pd
 import os
-
+from selenium import webdriver
 
 class ICAR_Scrapper:
     def __init__(self):
@@ -118,23 +118,113 @@ class ICAR_Scrapper:
             return {"Error": "No data found"}
 
 
-if __name__ == "__main__":
-    scrapper = ICAR_Scrapper()
+class FAO_Scrapper:
+    def __init__(self):
+        self.url = "https://www.fao.org/home/search/en/?"
+        self.query = None
 
-    query = "Agriculture"
-    scrapped_data = scrapper.get_query_data(query)
+    def get_query_data(self, query):
+        processed_query = query.replace(" ", "+")
 
-    query = "Mango"
-    scrapped_data = scrapper.get_query_data(query)
+        if not processed_query:
+            return {"Error": "Invalid input"}
 
-    query = "Wheat"
-    scrapped_data = scrapper.get_query_data(query)
+        self.query = processed_query
 
-    query = "Rice"
-    scrapped_data = scrapper.get_query_data(query)
+        url = self.url + "q=" + processed_query
+        response = self.get_data(processed_query, url)
 
-    query = "Cotton"
-    scrapped_data = scrapper.get_query_data(query)
+        if response:
+            return {"Response": response}
+        else:
+            return {"Error": "No data found"}
 
-    query = "Pulses"
-    scrapped_data = scrapper.get_query_data(query)
+    def get_data(self, query, url):
+        try:
+            driver = webdriver.Edge()
+            driver.get(url)
+        except requests.RequestException as e:
+            return {"Error": str(e)}
+
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
+        data = []
+
+        query_data = soup.find('div', class_='gsc-expansionArea')
+        if query_data:
+            cards = query_data.find_all(
+                'div', class_='gsc-webResult gsc-result')
+            for card in cards:
+                title = ""
+                content = ""
+                description = ""
+                link = ""
+                category = "Agriculture"
+
+                card = card.find('div', class_='gs-webResult gs-result')
+                header = card.find('div', class_='gsc-thumbnail-inside')
+                title_holder = header.find('div', class_='gs-title')
+                a_tag = title_holder.find('a')
+                link = a_tag['href']
+                title = a_tag.text
+
+                home_driver = webdriver.Edge()
+                home_driver.get(link)
+                home_soup = BeautifulSoup(
+                    home_driver.page_source, 'html.parser')
+
+                content_holder = home_soup.find('section', id='content')
+                if content_holder:
+                    content_holder = content_holder.find(
+                        'div', class_='main-internal')
+                    if content_holder:
+                        desc_holder = content_holder.find(
+                            'div', class_='csc-default')
+                        if desc_holder:
+                            desc_holder = desc_holder.find(
+                                'p', class_='bodytext')
+                            if desc_holder:
+                                description = desc_holder.text
+                            else:
+                                description = "-"
+
+                        content_holder = content_holder.find_all(
+                            'div', class_='rgaccord1-nest')
+                        if content_holder:
+                            content = ""
+                            for div in content_holder:
+                                section_title_holder = div.find('h3')
+                                section_title = section_title_holder.text
+
+                                text_holder = div.find('div')
+                                text_holder = text_holder.find('div')
+                                text = ''
+
+                                if text_holder:
+                                    text = text_holder.text
+
+                                content += section_title + "\n" + text + "\n\n"
+
+                data.append({
+                    "title": title,
+                    "content": content,
+                    "description": description,
+                    "link": link,
+                    "query": query,
+                    "category": category
+                })
+            home_driver.quit()
+            driver.quit()
+            if data:
+                df = pd.DataFrame(data)
+                header = ['title', 'content', 'description',
+                          'link', 'query', 'category']
+                if os.path.isfile('FAO.csv') and os.path.getsize('FAO.csv') > 0:
+                    df.to_csv('FAO.csv', mode='a', header=False, index=False)
+                else:
+                    df.to_csv('FAO.csv', mode='a', header=header, index=False)
+                return data
+            else:
+                return {"Error": "No data found"}
+
+        else:
+            return {"Error": "No data found"}
