@@ -51,7 +51,7 @@ def get_icar():
 
 
 @app.route('/fao', methods=['GET'])
-def get_icar():
+def get_fao():
     query = request.args.get('query')
 
     scrapper = FAO_Scrapper()
