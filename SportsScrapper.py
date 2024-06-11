@@ -111,15 +111,6 @@ class BCCI_Scrapper:
                     "sport": "Cricket"
                 })
             if data:
-                df = pd.DataFrame(data)
-                header = ['title', 'date', 'views',
-                          'platform', 'type', 'player_name', 'image_url', 'link', 'sport']
-                if os.path.isfile('BCCI.csv') and os.path.getsize('BCCI.csv') > 0:
-                    df.to_csv('BCCI.csv', mode='a',
-                              header=False, index=False)
-                else:
-                    df.to_csv('BCCI.csv', mode='a',
-                              header=header, index=False)
                 return data
             else:
                 return {"Error": "No data found"}
@@ -215,15 +206,6 @@ class Indian_Athletes_Scrapper:
                         "sport": "Athletics"
                     })
             if data:
-                df = pd.DataFrame(data)
-                header = ['title', 'date', 'content',
-                          'player_name', 'image_url', 'link', 'sport']
-                if os.path.isfile('IndianAthletes.csv') and os.path.getsize('IndianAthletes.csv') > 0:
-                    df.to_csv('IndianAthletes.csv', mode='a',
-                              header=False, index=False)
-                else:
-                    df.to_csv('IndianAthletes.csv', mode='a',
-                              header=header, index=False)
                 return data
             else:
                 return {"Error": "No data found"}
@@ -310,13 +292,6 @@ class ICC_Scrapper:
                 })
 
             if data:
-                df = pd.DataFrame(data)
-                header = ['title', 'date', 'content',
-                          'player_name', 'image_url', 'link', 'sport']
-                if os.path.isfile('ICC.csv') and os.path.getsize('ICC.csv') > 0:
-                    df.to_csv('ICC.csv', mode='a', header=False, index=False)
-                else:
-                    df.to_csv('ICC.csv', mode='a', header=header, index=False)
                 return data
             else:
                 return {"Error": "No data found"}

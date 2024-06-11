@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import pandas as pd
 from SportsScrapper import BCCI_Scrapper, Indian_Athletes_Scrapper, ICC_Scrapper
-from AgricultureScrapper import ICAR_Scrapper, FAO_Scrapper
 
 app = Flask(__name__)
 CORS(app)
@@ -40,22 +39,25 @@ def get_icc():
     return jsonify(articles)
 
 
-@app.route('/icar', methods=['GET'])
-def get_icar():
-    query = request.args.get('query')
+@app.route('/cricket', methods=['GET'])
+def get_cricket():
+    player_name = request.args.get('player_name')
+    news_type = request.args.get('news_type')
 
-    scrapper = ICAR_Scrapper()
-    articles = scrapper.get_query_data(query)
+    news_type = news_type.lower()
+    articles = []
 
-    return jsonify(articles)
-
-
-@app.route('/fao', methods=['GET'])
-def get_fao():
-    query = request.args.get('query')
-
-    scrapper = FAO_Scrapper()
-    articles = scrapper.get_query_data(query)
+    if news_type == 'bcci':
+        scrapper = BCCI_Scrapper()
+        articles = scrapper.get_player_data(player_name, 'bcci', 'cricket')
+    elif news_type == 'icc':
+        scrapper = ICC_Scrapper()
+        articles = scrapper.get_player_data(player_name)
+    elif news_type == 'indianathletes':
+        scrapper = Indian_Athletes_Scrapper()
+        articles = scrapper.get_player_data(player_name)
+    else:
+        return jsonify({'error': 'Invalid news type'})
 
     return jsonify(articles)
 
