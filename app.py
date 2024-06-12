@@ -81,10 +81,6 @@ if submit_button:
         plt.xlabel('Sentiment polarity label')
         plt.xticks(range(len(labels)), labels)
         plt.ylabel('Number of articles')
-        for i, count in enumerate(sentiment_counts):
-            labels[i] += f' ({count})'
-        plt.legend(labels)
-
         st.pyplot()
         st.write('Positive : means the sentiment is positive, Negative : means the sentiment is negative, Neutral : means the sentiment is neutral')
 
@@ -97,8 +93,6 @@ if submit_button:
         plt.xlabel('Sentiment subjectivity label')
         plt.xticks(range(len(labels)), labels)
         plt.ylabel('Number of articles')
-        for i, count in enumerate(subjectivity_counts):
-            labels[i] += f' ({count})'
         st.pyplot()
         st.write('Subjective : means the text is based on opinions or beliefs, Objective : means the text is based on facts or evidence')
 
