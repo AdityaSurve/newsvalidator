@@ -3,11 +3,17 @@ from flask_cors import CORS
 import pandas as pd
 from SportsScrapper import BCCI_Scrapper, Indian_Athletes_Scrapper, ICC_Scrapper
 from NewsVerification import Validator
+from flask.json import JSONEncoder
 import numpy as np
-import json
+class CustomJSONEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.float32):
+            return float(obj)
+        return super(CustomJSONEncoder, self).default(obj)
 
 app = Flask(__name__)
 CORS(app)
+app.json_encoder = CustomJSONEncoder
 
 
 @app.route('/bcci', methods=['GET'])
@@ -50,15 +56,8 @@ def get_cricket():
     news_type = request.args.get('news_type')
     validator = Validator()
     result = validator.search(player_name, type, platform, news_type)
-    result = json.dumps(result, cls=CustomEncoder)
     return jsonify(result)
 
-
-class CustomEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, np.float32):
-            return float(obj)
-        return super().default(obj)
 
 if __name__ == '__main__':
     app.run(debug=True)
