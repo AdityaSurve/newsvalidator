@@ -155,9 +155,9 @@ class Validator:
         official_data = self.search_official(
             query, player_type, player_platform, type)
         unofficial_data = self.search_unofficial(query)
-        if isinstance(official_data, str):  # Add this block
+        if isinstance(official_data, str):
             official_data = [json.loads(official_data)]
-        if isinstance(unofficial_data, str):  # And this block
+        if isinstance(unofficial_data, str):
             unofficial_data = [json.loads(unofficial_data)]
         truth_values = self.assess_truth(unofficial_data, official_data)
         influences = [self.detect_influence(article)
