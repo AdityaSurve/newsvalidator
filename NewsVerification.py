@@ -6,7 +6,8 @@ from sklearn.cluster import KMeans
 from textblob import TextBlob
 import numpy as np
 from SportsScrapper import BCCI_Scrapper, ICC_Scrapper, Indian_Athletes_Scrapper
-
+from unidecode import unidecode
+import json
 
 class Validator:
     def __init__(self):
@@ -57,8 +58,7 @@ class Validator:
         url = 'https://newsapi.org/v2/everything?'
         parameters = {
             'q': query,
-            'apiKey': '399a3fe0b00b4bbfa2188e79abdc5b8b',
-            'sources': 'the-times-of-india,the-hindu,hindustan-times,the-indian-express,news18,ndtv,india-today,zee-news,abp-news,india-tv,republic-world,the-quint,the-wire,scroll,the-print',
+            'apiKey': '399a3fe0b00b4bbfa2188e79abdc5b8b'
         }
         response = requests.get(url, params=parameters)
         data = response.json()
@@ -68,11 +68,12 @@ class Validator:
         truth_values = []
         vectorizer = TfidfVectorizer()
         for article in unofficial_data:
-            unofficial_text = f"{article['title']} {article['description']}"
+            unofficial_text = f"{article['title']} {article['description']} {article['content']}"
             similarity_scores = []
-
             for official_article in official_data:
-                official_text = f"{official_article['title']} {official_article['player_name']}"
+                title = unidecode(official_article['title'])
+                player_name = unidecode(official_article['player_name'])
+                official_text = f"{title} {player_name}"
                 vectors = vectorizer.fit_transform(
                     [official_text, unofficial_text])
                 similarity = cosine_similarity(
@@ -144,16 +145,20 @@ class Validator:
         text_embedding = self.bert_embedding(combined_text)
         bert_similarity = cosine_similarity(
             query_embedding, text_embedding)[0][0]
+        bert_similarity = min((bert_similarity + 1) /
+                              2 + tfidf_similarity / 2, 1)
         return {
-            'tfidf_similarity': tfidf_similarity,
-            'bert_similarity': bert_similarity
+            'similarity': bert_similarity
         }
 
     def search(self, query, player_type, player_platform, type):
         official_data = self.search_official(
             query, player_type, player_platform, type)
         unofficial_data = self.search_unofficial(query)
-
+        if isinstance(official_data, str):  # Add this block
+            official_data = [json.loads(official_data)]
+        if isinstance(unofficial_data, str):  # And this block
+            unofficial_data = [json.loads(unofficial_data)]
         truth_values = self.assess_truth(unofficial_data, official_data)
         influences = [self.detect_influence(article)
                       for article in unofficial_data]
@@ -170,15 +175,26 @@ class Validator:
             article['sentiment_polarity_label'] = sentiments[i]['polarity_label']
             article['sentiment_subjectivity'] = sentiments[i]['subjectivity']
             article['sentiment_subjectivity_label'] = sentiments[i]['subjectivity_label']
-            article['relevance_score_tfidf'] = relevance_scores[i]['tfidf_similarity']
-            article['relevance_score_bert'] = relevance_scores[i]['bert_similarity']
+            article['relevance_score'] = relevance_scores[i]['similarity']
 
         unofficial_data = sorted(
             unofficial_data, key=lambda x: x['truth_value'], reverse=True)
 
-        result = {
-            'official_data': official_data,
-            'unofficial_data': unofficial_data,
-            'clusters': clustered_articles,
-        }
+        unofficial_count = len(unofficial_data)
+        official_count = len(official_data)
+
+        if official_count > 0 or unofficial_count > 0:
+            result = {
+                'status': 'success',
+                'unofficial_count': unofficial_count,
+                'official_count': official_count,
+                'official_data': official_data,
+                'unofficial_data': unofficial_data,
+                'clusters': clustered_articles,
+            }
+        else:
+            result = {
+                'status': 'error',
+                'message': 'No data found'
+            }
         return result
