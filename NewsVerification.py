@@ -6,6 +6,7 @@ from sklearn.cluster import KMeans
 from textblob import TextBlob
 import numpy as np
 from SportsScrapper import BCCI_Scrapper, ICC_Scrapper, Indian_Athletes_Scrapper
+from FinanceScrapper import Investopedia_Scrapper
 from unidecode import unidecode
 import json
 
@@ -24,32 +25,40 @@ class Validator:
         embeddings = outputs.last_hidden_state.mean(dim=1).detach().numpy()
         return embeddings
 
-    def search_official(self, query, player_type, player_platform, search_type):
+    def search_official(self,
+                        query,
+                        # player_type,
+                        # player_platform,
+                        # search_type
+                        ):
         data = []
-        if search_type == 'bcci':
-            scrapper = BCCI_Scrapper()
-            response = scrapper.get_player_data(
-                query, player_platform, player_type)
-            data.extend(response['Response'])
-        elif search_type == 'icc':
-            scrapper = ICC_Scrapper()
-            response = scrapper.get_player_data(query)
-            data.extend(response['Response'])
-        elif search_type == 'indian_athletes':
-            scrapper = Indian_Athletes_Scrapper()
-            response = scrapper.get_player_data(query)
-            data.extend(response['Response'])
-        else:
-            scrapper = BCCI_Scrapper()
-            response = scrapper.get_player_data(
-                query, player_platform, player_type)
-            data.extend(response['Response'])
-            scrapper = ICC_Scrapper()
-            response = scrapper.get_player_data(query)
-            data.extend(response['Response'])
-            scrapper = Indian_Athletes_Scrapper()
-            response = scrapper.get_player_data(query)
-            data.extend(response['Response'])
+        # if search_type == 'bcci':
+        #     scrapper = BCCI_Scrapper()
+        #     response = scrapper.get_player_data(
+        #         query, player_platform, player_type)
+        #     data.extend(response['Response'])
+        # elif search_type == 'icc':
+        #     scrapper = ICC_Scrapper()
+        #     response = scrapper.get_player_data(query)
+        #     data.extend(response['Response'])
+        # elif search_type == 'indian_athletes':
+        #     scrapper = Indian_Athletes_Scrapper()
+        #     response = scrapper.get_player_data(query)
+        #     data.extend(response['Response'])
+        # else:
+        #     scrapper = BCCI_Scrapper()
+        #     response = scrapper.get_player_data(
+        #         query, player_platform, player_type)
+        #     data.extend(response['Response'])
+        #     scrapper = ICC_Scrapper()
+        #     response = scrapper.get_player_data(query)
+        #     data.extend(response['Response'])
+        #     scrapper = Indian_Athletes_Scrapper()
+        #     response = scrapper.get_player_data(query)
+        #     data.extend(response['Response'])
+        scrapper = Investopedia_Scrapper()
+        response = scrapper.get_query_data(query)
+        data.extend(response['Response'])
         return data
 
     def search_unofficial(self, query):
@@ -72,16 +81,17 @@ class Validator:
             similarity_scores = []
             for official_article in official_data:
                 title = unidecode(official_article['title'])
-                player_name = unidecode(official_article['player_name'])
-                official_text = f"{title} {player_name}"
+                content = unidecode(official_article['content'])
+                description = unidecode(official_article['description'])
+                official_text = f"{title} {content} {description}"
                 vectors = vectorizer.fit_transform(
                     [official_text, unofficial_text])
                 similarity = cosine_similarity(
                     vectors[0:1], vectors[1:2])[0][0]
                 similarity_scores.append(similarity)
             truth_value = max(similarity_scores)
-            if article['source']['name'] in ['The Times of India', 'The Hindu', 'Hindustan Times', 'The Indian Express', 'News18', 'NDTV', 'India Today', 'Zee News', 'ABP News', 'India TV', 'Republic World', 'The Quint', 'The Wire', 'Scroll', 'The Print']:
-                truth_value = min(truth_value + 0.4, 1)
+            if article['source']['name'] in ['The Times of India', 'The Hindu', 'Hindustan Times', 'The Indian Express', 'News18', 'NDTV', 'India Today', 'Zee News', 'ABP News', 'India TV', 'Republic World', 'The Quint', 'The Wire', 'Scroll', 'The Print', 'Business Standard', 'Economic Times', 'Financial Express', 'Money Control', 'Livemint', 'Bloomberg Quint', 'CNBC TV18', 'Zee Business', 'Business Today', 'Business Insider', 'Forbes', 'Fortune', 'Bloomberg', 'Reuters', 'Market Watch', 'Yahoo Finance', 'Investopedia']:
+                truth_value = min(truth_value + 0.3, 1)
             truth_values.append(truth_value)
         return truth_values
 
@@ -95,21 +105,21 @@ class Validator:
             label['label'] == 'POLITICS' and label['score'] > 0.5 for label in political_result)
         return political_influence, emotional_influence
 
-    def cluster_articles(self, articles):
-        contents = [article['content'] for article in articles]
-        vectorizer = TfidfVectorizer(stop_words='english')
-        X = vectorizer.fit_transform(contents)
+    # def cluster_articles(self, articles):
+    #     contents = [article['content'] for article in articles]
+    #     vectorizer = TfidfVectorizer(stop_words='english')
+    #     X = vectorizer.fit_transform(contents)
 
-        true_k = 5
-        model = KMeans(n_clusters=true_k, random_state=42)
-        model.fit(X)
+    #     true_k = 5
+    #     model = KMeans(n_clusters=true_k, random_state=42)
+    #     model.fit(X)
 
-        labels = model.labels_
-        cluster_dict = {i: [] for i in range(true_k)}
-        for idx, label in enumerate(labels):
-            cluster_dict[label].append(articles[idx])
+    #     labels = model.labels_
+    #     cluster_dict = {i: [] for i in range(true_k)}
+    #     for idx, label in enumerate(labels):
+    #         cluster_dict[label].append(articles[idx])
 
-        return cluster_dict
+    #     return cluster_dict
 
     def sentiment_analysis(self, article):
         analysis = TextBlob(article['content'])
@@ -145,24 +155,24 @@ class Validator:
         text_embedding = self.bert_embedding(combined_text)
         bert_similarity = cosine_similarity(
             query_embedding, text_embedding)[0][0]
-        bert_similarity = min((bert_similarity + 1) /
-                              2 + tfidf_similarity / 2, 1)
+        similarity = max(bert_similarity, tfidf_similarity)
         return {
-            'similarity': bert_similarity
+            'similarity': similarity
         }
 
-    def search(self, query, player_type, player_platform, type):
-        official_data = self.search_official(
-            query, player_type, player_platform, type)
-        unofficial_data = self.search_unofficial(query)
+    def search(self, query):
+        official_data = self.search_official(query)
+        entity = query.split(' ')[0]
+        unofficial_data = self.search_unofficial(entity)
         if isinstance(official_data, str):
             official_data = [json.loads(official_data)]
         if isinstance(unofficial_data, str):
             unofficial_data = [json.loads(unofficial_data)]
+
         truth_values = self.assess_truth(unofficial_data, official_data)
         influences = [self.detect_influence(article)
                       for article in unofficial_data]
-        clustered_articles = self.cluster_articles(unofficial_data)
+        # clustered_articles = self.cluster_articles(unofficial_data)
         sentiments = [self.sentiment_analysis(article)
                       for article in unofficial_data]
         relevance_scores = [self.relevance_score(article, query)
@@ -178,7 +188,7 @@ class Validator:
             article['relevance_score'] = relevance_scores[i]['similarity']
 
         unofficial_data = sorted(
-            unofficial_data, key=lambda x: x['truth_value'], reverse=True)
+            unofficial_data, key=lambda x: x['relevance_score'], reverse=True)
 
         unofficial_count = len(unofficial_data)
         official_count = len(official_data)
@@ -190,7 +200,7 @@ class Validator:
                 'official_count': official_count,
                 'official_data': official_data,
                 'unofficial_data': unofficial_data,
-                'clusters': clustered_articles,
+                # 'clusters': clustered_articles,
             }
         else:
             result = {

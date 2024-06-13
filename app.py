@@ -2,16 +2,17 @@ import streamlit as st
 import pandas as pd
 import requests
 import matplotlib.pyplot as plt
+from PIL import Image
 
 st.title('News Data')
 
 with st.form(key='my_form'):
-    player_name = st.text_input(label='Enter query ... ')
+    query = st.text_input(label='Enter query ... ')
     submit_button = st.form_submit_button(label='Submit')
 
 if submit_button:
     response = requests.get(
-        f'http://localhost:5000/validator?player_name={player_name}&platform=international&type=men&news_type=bcci')
+        f'http://localhost:5000/validator?query={query}')
 
     if response.status_code == 200:
         response_data = response.json()
@@ -56,6 +57,19 @@ if submit_button:
         st.table(source_truth_values_with_index[['source']])
         st.write('Truth value is a measure of the reliability of the news source. It ranges from 0 to 1, where 0 means the news source is unreliable and 1 means the news source is reliable.')
 
+        most_truth_value_article = unofficial_data.loc[unofficial_data['truth_value'].idxmax(
+        )]
+        st.write('Most truth value article : ')
+        st.write('Title : ' + most_truth_value_article['title'])
+        st.write('Description : ' + most_truth_value_article['description'])
+        st.write('Source : ' + most_truth_value_article['source'])
+        st.write('URL : ' + most_truth_value_article['url'])
+        image = Image.open(requests.get(
+            most_truth_value_article['urlToImage'], stream=True).raw)
+        st.image(image, caption='Most truth value article image',
+                 use_column_width=True)
+
+
         source_relevance_scores = unofficial_data.groupby(
             'source')['relevance_score'].agg(['max', 'mean', 'min']).reset_index()
         source_relevance_scores['source_index'] = range(
@@ -71,6 +85,19 @@ if submit_button:
         st.pyplot()
         st.table(source_relevance_scores_with_index[['source']])
         st.write('Relevance score is a measure of how relevant the news article is to the query. It ranges from 0 to 1, where 0 means the news article is irrelevant and 1 means the news article is relevant.')
+
+        most_relevance_score_article = unofficial_data.loc[unofficial_data['relevance_score'].idxmax(
+        )]
+        st.write('Most relevance score article : ')
+        st.write('Title : ' + most_relevance_score_article['title'])
+        st.write('Description : ' +
+                 most_relevance_score_article['description'])
+        st.write('Source : ' + most_relevance_score_article['source'])
+        st.write('URL : ' + most_relevance_score_article['url'])
+        image = Image.open(requests.get(
+            most_relevance_score_article['urlToImage'], stream=True).raw)
+        st.image(image, caption='Most relevance score article image',
+                 use_column_width=True)
 
         sentiment_counts = unofficial_data['sentiment_polarity_label'].value_counts(
         )

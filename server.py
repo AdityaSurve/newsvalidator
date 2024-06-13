@@ -50,12 +50,9 @@ def get_icc():
 
 @app.route('/validator', methods=['GET'])
 def get_cricket():
-    player_name = request.args.get('player_name')
-    platform = request.args.get('platform')
-    type = request.args.get('type')
-    news_type = request.args.get('news_type')
+    query = request.args.get('query')
     validator = Validator()
-    result = validator.search(player_name, type, platform, news_type)
+    result = validator.search(query)
     return jsonify(result)
 
 
