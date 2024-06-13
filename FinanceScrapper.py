@@ -162,7 +162,6 @@ class Investopedia_Scrapper:
                                                 quad_fact_checker_holder = tert_fact_checker_holder.find(
                                                     'a')
                                                 if quad_fact_checker_holder:
-                                                    print("Here")
                                                     fact_checker = quad_fact_checker_holder.text
                                                     fact_checker_link = quad_fact_checker_holder['href']
                 except requests.RequestException as e:

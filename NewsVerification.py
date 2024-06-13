@@ -5,10 +5,16 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.cluster import KMeans
 from textblob import TextBlob
 import numpy as np
-from SportsScrapper import BCCI_Scrapper, ICC_Scrapper, Indian_Athletes_Scrapper
+# from SportsScrapper import BCCI_Scrapper, ICC_Scrapper, Indian_Athletes_Scrapper
 from FinanceScrapper import Investopedia_Scrapper
 from unidecode import unidecode
 import json
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+import string
+from gensim.models import Word2Vec
+from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 
 class Validator:
     def __init__(self):
@@ -144,18 +150,47 @@ class Validator:
         }
 
     def relevance_score(self, article, query):
-        title = article['title']
-        description = article['description']
-        content = article['content']
+        def preprocess_text(text):
+            if text is None:
+                return ''
+            lemmatizer = WordNetLemmatizer()
+            text = text.lower()
+            text = "".join(
+                [char for char in text if char not in string.punctuation])
+            words = word_tokenize(text)
+            words = [lemmatizer.lemmatize(word)
+                     for word in words if word not in ENGLISH_STOP_WORDS]
+            return " ".join(words)
+
+        def get_word2vec_embeddings(text):
+            words = word_tokenize(text)
+            model = Word2Vec([words], min_count=1)
+            embeddings = np.mean([model.wv[word] for word in words], axis=0)
+            return embeddings.reshape(1, -1)
+
+        title = preprocess_text(article['title'])
+        description = preprocess_text(article['description'])
+        content = preprocess_text(article['content'])
         combined_text = f"{title} {description} {content}"
+        query = preprocess_text(query)
+
         vectorizer = TfidfVectorizer()
         vectors = vectorizer.fit_transform([query, combined_text])
         tfidf_similarity = cosine_similarity(vectors[0:1], vectors[1:2])[0][0]
+
         query_embedding = self.bert_embedding(query)
         text_embedding = self.bert_embedding(combined_text)
         bert_similarity = cosine_similarity(
             query_embedding, text_embedding)[0][0]
-        similarity = max(bert_similarity, tfidf_similarity)
+
+        query_embedding_w2v = get_word2vec_embeddings(query)
+        text_embedding_w2v = get_word2vec_embeddings(combined_text)
+        w2v_similarity = cosine_similarity(
+            query_embedding_w2v, text_embedding_w2v)[0][0]
+
+        similarity = np.average(
+            [bert_similarity, tfidf_similarity, w2v_similarity], weights=[0.5, 0.3, 0.2])
+
         return {
             'similarity': similarity
         }
