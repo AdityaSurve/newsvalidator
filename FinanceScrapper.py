@@ -180,7 +180,6 @@ class Investopedia_Scrapper:
                     "content": content,
                     "link": link,
                     "keypoints": keypoints,
-                    "query": query,
                     "category": category
                 })
 

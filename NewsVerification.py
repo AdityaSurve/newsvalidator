@@ -2,10 +2,8 @@ import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
 from transformers import pipeline, BertTokenizer, BertModel
 from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.cluster import KMeans
 from textblob import TextBlob
 import numpy as np
-# from SportsScrapper import BCCI_Scrapper, ICC_Scrapper, Indian_Athletes_Scrapper
 from FinanceScrapper import Investopedia_Scrapper
 from unidecode import unidecode
 import json
@@ -31,59 +29,170 @@ class Validator:
         embeddings = outputs.last_hidden_state.mean(dim=1).detach().numpy()
         return embeddings
 
-    def search_official(self,
-                        query,
-                        # player_type,
-                        # player_platform,
-                        # search_type
-                        ):
+    def search_official(self, query):
         data = []
-        # if search_type == 'bcci':
-        #     scrapper = BCCI_Scrapper()
-        #     response = scrapper.get_player_data(
-        #         query, player_platform, player_type)
-        #     data.extend(response['Response'])
-        # elif search_type == 'icc':
-        #     scrapper = ICC_Scrapper()
-        #     response = scrapper.get_player_data(query)
-        #     data.extend(response['Response'])
-        # elif search_type == 'indian_athletes':
-        #     scrapper = Indian_Athletes_Scrapper()
-        #     response = scrapper.get_player_data(query)
-        #     data.extend(response['Response'])
-        # else:
-        #     scrapper = BCCI_Scrapper()
-        #     response = scrapper.get_player_data(
-        #         query, player_platform, player_type)
-        #     data.extend(response['Response'])
-        #     scrapper = ICC_Scrapper()
-        #     response = scrapper.get_player_data(query)
-        #     data.extend(response['Response'])
-        #     scrapper = Indian_Athletes_Scrapper()
-        #     response = scrapper.get_player_data(query)
-        #     data.extend(response['Response'])
         scrapper = Investopedia_Scrapper()
         response = scrapper.get_query_data(query)
         data.extend(response['Response'])
         return data
 
     def search_unofficial(self, query):
+        def preprocess_data(data):
+            for article in data:
+                if article['categories'] != None:
+                    categories = article['categories']
+                    category_data = []
+                    for category in categories:
+                        category_data.append(category['name'])
+                    article['categories'] = ', '.join(category_data)
+                    if not any(category['name'].isalnum() for category in categories):
+                        article['categories'] = '-'
+                else :
+                    article['categories'] = '-'
+
+                if 'claim' in article:
+                    del article['claim']
+                    
+                if 'clusterId' in article:
+                    del article['clusterId']
+
+                if 'companies' in article and article['companies']:
+                    companies = article['companies']
+                    company_data = [company['name'] for company in companies if 'name' in company]
+                    article['companies'] = ', '.join(company_data)
+                else:
+                    article['companies'] = '-'
+
+                if 'entities' in article and article['entities']:
+                    entities = article['entities']
+                    entity_data = []
+                    entity_mentions = []
+                    for entity in entities:
+                        entity_data.append(entity['data'])
+                        entity_mentions.append(entity['mentions'])
+                    article['entities'] = ', '.join(
+                        [f'{data} : {mentions}' for data, mentions in zip(entity_data, entity_mentions)])
+                else:
+                    article['entities'] = '-'
+
+                if 'keywords' in article and article['keywords']:
+                    keywords = article['keywords']
+                    keyword_data = []
+                    keyword_mentions = []
+                    for keyword in keywords:
+                        keyword_data.append(keyword['name'])
+                        keyword_mentions.append(keyword['weight'])
+                    article['keywords'] = ', '.join(
+                        [f'{data} : {mentions}' for data, mentions in zip(keyword_data, keyword_mentions)])
+                else:
+                    article['keywords'] = '-'
+
+                if 'language' in article:
+                    del article['language']
+
+                if 'labels' in article:
+                    del article['labels']
+
+                if 'locations' in article:
+                    del article['locations']
+
+                if 'links' in article and article['links']:
+                    article['links'] = ', '.join(article['links'])
+                else:
+                    article['links'] = '-'
+
+                if 'refreshDate' in article:
+                    del article['refreshDate']
+
+                if 'places' in article:
+                    del article['places']
+
+                if 'people' in article:
+                    del article['people']
+
+                if 'matchedAuthors' in article:
+                    del article['matchedAuthors']
+
+                if 'reprint' in article:
+                    del article['reprint']
+
+                if 'reprintGroupId' in article:
+                    del article['reprintGroupId']
+
+                if 'translatedDescription' in article:
+                    del article['translatedDescription']
+
+                if 'translatedTitle' in article:
+                    del article['translatedTitle']
+
+                if 'translatedSummary' in article:
+                    del article['translatedSummary']
+
+                if 'translation' in article:
+                    del article['translation']
+
+                if 'verdict' in article:
+                    del article['verdict']
+                
+                if article['addDate'] != None:
+                    article['addDate'] = article['addDate'].split('T')[0]
+                    article['addDate'] = article['addDate'].split('-')
+                    article['addDate'] = f"{article['addDate'][2]}/{article['addDate'][1]}/{article['addDate'][0]}"
+                else:
+                    article['addDate'] = '-'
+
+                if 'authorsByline' in article:
+                    article['author'] = article['authorsByline']
+                    if not article['author'] or not any(char.isalnum() for char in article['author']):
+                        article['author'] = '-'
+                    del article['authorsByline']
+                else:
+                    article['author'] = '-'
+
+                if article['pubDate'] != None:
+                    article['pubDate'] = article['pubDate'].split('T')[0]
+                    article['pubDate'] = article['pubDate'].split('-')
+                    article['pubDate'] = f"{article['pubDate'][2]}/{article['pubDate'][1]}/{article['pubDate'][0]}" 
+                else:
+                    article['pubDate'] = '-'
+                
+                article['source'] = article['source']['domain'] 
+                
+                if 'topics' in article and article['topics'] != None and len(article['topics']) > 0:      
+                    topics = article['topics']
+                    topic_data = []
+                    for topic in topics:
+                        topic_data.append(topic['name'])
+                    article['topics'] = ', '.join(topic_data)
+                else:
+                    article['topics'] = '-'
+
+                if 'content' in article and article['content'] != None:
+                    if not any(char.isalnum() for char in article['content']):
+                        article['content'] = '-'
+                else:
+                    article['content'] = '-'
+
+            return data
         query = query.lower()
-        query = query.replace(' ', '-')
-        url = 'https://newsapi.org/v2/everything?'
+        url = 'https://api.goperigon.com/v1/all'
         parameters = {
             'q': query,
-            'apiKey': '399a3fe0b00b4bbfa2188e79abdc5b8b'
+            'apiKey': '20504987-ba9f-48f7-afc1-1fb20ce0849d'
         }
         response = requests.get(url, params=parameters)
         data = response.json()
-        return data['articles']
+        data = data['articles']
+
+        data = preprocess_data(data)
+
+        return data
 
     def assess_truth(self, unofficial_data, official_data):
         truth_values = []
         vectorizer = TfidfVectorizer()
         for article in unofficial_data:
-            unofficial_text = f"{article['title']} {article['description']} {article['content']}"
+            unofficial_text = f"{article['title']} {article['description']} {article['content']} {article['summary']}"
             similarity_scores = []
             for official_article in official_data:
                 title = unidecode(official_article['title'])
@@ -96,8 +205,6 @@ class Validator:
                     vectors[0:1], vectors[1:2])[0][0]
                 similarity_scores.append(similarity)
             truth_value = max(similarity_scores)
-            if article['source']['name'] in ['The Times of India', 'The Hindu', 'Hindustan Times', 'The Indian Express', 'News18', 'NDTV', 'India Today', 'Zee News', 'ABP News', 'India TV', 'Republic World', 'The Quint', 'The Wire', 'Scroll', 'The Print', 'Business Standard', 'Economic Times', 'Financial Express', 'Money Control', 'Livemint', 'Bloomberg Quint', 'CNBC TV18', 'Zee Business', 'Business Today', 'Business Insider', 'Forbes', 'Fortune', 'Bloomberg', 'Reuters', 'Market Watch', 'Yahoo Finance', 'Investopedia']:
-                truth_value = min(truth_value + 0.3, 1)
             truth_values.append(truth_value)
         return truth_values
 
@@ -110,22 +217,6 @@ class Validator:
         political_influence = any(
             label['label'] == 'POLITICS' and label['score'] > 0.5 for label in political_result)
         return political_influence, emotional_influence
-
-    # def cluster_articles(self, articles):
-    #     contents = [article['content'] for article in articles]
-    #     vectorizer = TfidfVectorizer(stop_words='english')
-    #     X = vectorizer.fit_transform(contents)
-
-    #     true_k = 5
-    #     model = KMeans(n_clusters=true_k, random_state=42)
-    #     model.fit(X)
-
-    #     labels = model.labels_
-    #     cluster_dict = {i: [] for i in range(true_k)}
-    #     for idx, label in enumerate(labels):
-    #         cluster_dict[label].append(articles[idx])
-
-    #     return cluster_dict
 
     def sentiment_analysis(self, article):
         analysis = TextBlob(article['content'])
@@ -207,7 +298,6 @@ class Validator:
         truth_values = self.assess_truth(unofficial_data, official_data)
         influences = [self.detect_influence(article)
                       for article in unofficial_data]
-        # clustered_articles = self.cluster_articles(unofficial_data)
         sentiments = [self.sentiment_analysis(article)
                       for article in unofficial_data]
         relevance_scores = [self.relevance_score(article, query)
@@ -223,7 +313,7 @@ class Validator:
             article['relevance_score'] = relevance_scores[i]['similarity']
 
         unofficial_data = sorted(
-            unofficial_data, key=lambda x: x['relevance_score'], reverse=True)
+            unofficial_data, key=lambda x: x['score'], reverse=True)
 
         unofficial_count = len(unofficial_data)
         official_count = len(official_data)
@@ -235,7 +325,6 @@ class Validator:
                 'official_count': official_count,
                 'official_data': official_data,
                 'unofficial_data': unofficial_data,
-                # 'clusters': clustered_articles,
             }
         else:
             result = {
