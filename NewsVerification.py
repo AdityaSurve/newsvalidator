@@ -180,17 +180,22 @@ class Validator:
 
             return data
         query = query.lower()
+        pages = [0, 1, 2, 3, 4, 5]
         url = 'https://api.goperigon.com/v1/all'
-        parameters = {
-            'q': query,
-            'apiKey': '20504987-ba9f-48f7-afc1-1fb20ce0849d'
-        }
-        response = requests.get(url, params=parameters)
-        data = response.json()
-        data = data['articles']
-
+        data = []
+        for page in pages:
+            try:
+                parameters = {
+                    'q': query,
+                    'apiKey': '20504987-ba9f-48f7-afc1-1fb20ce0849d',
+                    'page': page,
+                    'language': 'en',
+                }
+                response = requests.get(url, params=parameters)
+                data.extend(response.json()['articles'])
+            except:
+                pass
         data = preprocess_data(data)
-
         return data
 
     def assess_truth(self, unofficial_data, official_data):
