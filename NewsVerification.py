@@ -16,6 +16,7 @@ from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 import torch.nn.functional as F
 import torch
+import pandas as pd
 
 class Validator:
     def __init__(self):
@@ -24,9 +25,15 @@ class Validator:
         self.sentiment_pipeline = pipeline("sentiment-analysis")
         self.emotion_pipeline = pipeline("text-classification", model="j-hartmann/emotion-english-distilroberta-base")
         political_model_name = "premsa/political-bias-prediction-allsides-mDeBERTa"
-        self.political_model = AutoModelForSequenceClassification.from_pretrained(political_model_name)
-        self.political_tokenizer = AutoTokenizer.from_pretrained(political_model_name)
-
+        self.political_model = AutoModelForSequenceClassification.from_pretrained(
+            political_model_name)
+        self.political_tokenizer = AutoTokenizer.from_pretrained(
+            political_model_name)
+        self.semantic_model_name = "bert-base-uncased"
+        self.semantic_model = AutoModelForSequenceClassification.from_pretrained(
+            self.semantic_model_name)
+        self.semantic_tokenizer = AutoTokenizer.from_pretrained(
+            self.semantic_model_name)
     def bert_embedding(self, text):
         inputs = self.tokenizer(text, return_tensors='pt',
                                 max_length=512, truncation=True, padding=True)
@@ -180,7 +187,7 @@ class Validator:
 
             return data
         query = query.lower()
-        pages = [0, 1, 2, 3, 4, 5]
+        pages = [0, 1, 2]
         url = 'https://api.goperigon.com/v1/all'
         data = []
         for page in pages:
@@ -225,15 +232,19 @@ class Validator:
 
     def detect_influence(self, article):
         content = article['content']
+
+        # Sentiment analysis
         sentiment_result = self.sentiment_pipeline(content)
         emotional_influence = sentiment_result[0]['label'] in ['NEGATIVE', 'POSITIVE']
+
+        # Political bias detection
         political_inputs = self.political_tokenizer.encode_plus(content, return_tensors='pt', truncation=True, padding=True)
         political_output = self.political_model(**political_inputs)
         political_probabilities = torch.nn.functional.softmax(political_output.logits, dim=-1)
         political_labels = ['Neutral', 'Liberal', 'Conservative']
         political_scores = political_probabilities.detach().numpy()[0]
-        political_influence = any(score > 0.5 for score in political_scores if political_labels[political_scores.tolist().index(score)] != 'Neutral')
-        
+        political_influence = any(
+            score > 0.5 for score in political_scores if political_labels[political_scores.tolist().index(score)] != 'Neutral')
         return political_influence, emotional_influence
 
     def sentiment_analysis(self, article):
@@ -363,6 +374,11 @@ class Validator:
                 'official_data': official_data,
                 'unofficial_data': unofficial_data,
             }
+            df = pd.DataFrame(unofficial_data)
+            df.to_csv('unofficial_data.csv', index=False)
+            df = pd.DataFrame(official_data)
+            df.to_csv('official_data.csv', index=False)
+
         else:
             result = {
                 'status': 'error',
