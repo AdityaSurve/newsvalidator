@@ -57,6 +57,7 @@ class BCCI_Scrapper:
                 views = ""
                 image_url = ""
                 link = ""
+                content = ""
 
                 if header_content.find('div', class_='text-detail br-b'):
                     title_holder = header_content.find(
@@ -95,6 +96,19 @@ class BCCI_Scrapper:
                     links_holder = card.find('a')
                     link = links_holder['href']
                     link = "https://www.bcci.tv" + link
+
+                    articles_home_page = requests.get(link)
+                    articles_home_page.raise_for_status()
+                    articles_home_soup = BeautifulSoup(
+                        articles_home_page.text, 'html.parser')
+                    content_holder = articles_home_soup.find(
+                        'div', class_='repor-bottom mt-3')
+                    if content_holder:
+                        paragraphs = content_holder.find_all('p')
+                        content = ""
+                        for p in paragraphs:
+                            content += p.text + " "
+                        content = content.strip()
                     image_url = links_holder['data-thumbnile']
                 if title_holder:
                     title = title_holder.find('p').text
@@ -108,6 +122,8 @@ class BCCI_Scrapper:
                     "player_name": temp_player_name,
                     "image_url": image_url,
                     "link": link,
+                    "description": content,
+                    "content": content,
                     "sport": "Cricket"
                 })
             if data:
@@ -116,7 +132,6 @@ class BCCI_Scrapper:
                 return {"Error": "No data found"}
         else:
             return {"Error": "No data found"}
-
 
 class Indian_Athletes_Scrapper:
     def __init__(self):
@@ -297,4 +312,3 @@ class ICC_Scrapper:
                 return {"Error": "No data found"}
         else:
             return {"Error": "No data found"}
-

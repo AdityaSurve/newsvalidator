@@ -5,6 +5,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from textblob import TextBlob
 import numpy as np
 from FinanceScrapper import Investopedia_Scrapper
+from SportsScrapper import BCCI_Scrapper
 from unidecode import unidecode
 import json
 from nltk.tokenize import word_tokenize
@@ -43,8 +44,10 @@ class Validator:
 
     def search_official(self, query):
         data = []
-        scrapper = Investopedia_Scrapper()
-        response = scrapper.get_query_data(query)
+        # scrapper = Investopedia_Scrapper()
+        scrapper = BCCI_Scrapper()
+        # response = scrapper.get_query_data(query)
+        response = scrapper.get_player_data("World Cup", "International", "Men")
         data.extend(response['Response'])
         return data
 
@@ -194,7 +197,7 @@ class Validator:
             try:
                 parameters = {
                     'q': query,
-                    'apiKey': '20504987-ba9f-48f7-afc1-1fb20ce0849d',
+                    'apiKey': '32c5233a-e4ae-4877-82ec-c38c4fda3111',
                     'page': page,
                     'language': 'en',
                 }
